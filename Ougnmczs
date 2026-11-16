@@ -1,0 +1,121 @@
+-- ==========================================
+-- Script Name: StreamerTD Ultimate Macro Hub
+-- Executor: Delta Compatible
+-- ==========================================
+
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- สถานะการทำงานของแต่ละฟังก์ชัน (เปิด/ปิด)
+local State = {
+    AutoPlace = false,   -- 1. วางตัวอัตโนมัติ
+    AutoSell = false,    -- 2. ขายตัวเงินอัตโนมัติ
+    AutoStage = false,   -- 3. เลือกด่านอัตโนมัติ
+    AutoSpeed = false,   -- 4. ปรับความเร็วอัตโนมัติ
+    AutoSkip = false     -- 5. Auto ข้ามเวฟอัตโนมัติ
+}
+
+-- พิกัดปุ่มบนหน้าจอ (สามารถปรับค่า X, Y ให้ตรงกับตำแหน่ง UI ในเกม Streamer Tower Defense ของคุณได้)
+local Coords = {
+    PlacePos = Vector2.new(500, 400),  -- ตำแหน่งบนแมพสำหรับวางยูนิต
+    SellBtn  = Vector2.new(250, 450),  -- ตำแหน่งปุ่มขายตัว
+    StageBtn = Vector2.new(600, 350),  -- ตำแหน่งปุ่มเลือกด่าน / เริ่มเกม
+    SpeedBtn = Vector2.new(850, 120),  -- ตำแหน่งปุ่มเร่งความเร็วเกม
+    SkipBtn  = Vector2.new(500, 80)    -- ตำแหน่งปุ่มข้ามเวฟ (Skip Wave)
+}
+
+-- ฟังก์ชันจำลองการคลิกเมาส์/สัมผัสหน้าจอ
+local function ClickAt(pos)
+    VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y, 0, true, game, 1)
+    task.wait(0.03)
+    VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y, 0, false, game, 1)
+end
+
+-- ฟังก์ชันจำลองการกดปุ่มคีย์บอร์ด
+local function PressKey(keyCode)
+    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+    task.wait(0.03)
+    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+end
+
+-- สร้างหน้าต่าง UI เมนูในเกม
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 240, 0, 290)
+MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- ทำให้สามารถใช้นิ้วลากย้ายหน้าต่างเมนูได้
+
+-- หัวข้อ UI
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+Title.TextColor3 = Color3.fromRGB(0, 255, 170)
+Title.Text = "StreamerTD Macro Hub"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+
+-- ฟังก์ชันสร้างปุ่มกดเปิด-ปิดฟังก์ชัน
+local function CreateToggle(name, stateKey, order)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Position = UDim2.new(0.05, 0, 0, 40 + ((order - 1) * 43))
+    btn.BackgroundColor3 = Color3.fromRGB(180, 45, 45)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 13
+    btn.Text = name .. " : OFF"
+
+    btn.MouseButton1Click:Connect(function()
+        State[stateKey] = not State[stateKey]
+        btn.Text = name .. (State[stateKey] and " : ON" or " : OFF")
+        btn.BackgroundColor3 = State[stateKey] and Color3.fromRGB(45, 180, 75) or Color3.fromRGB(180, 45, 45)
+    end)
+end
+
+-- สร้างปุ่มฟังก์ชันทั้ง 5 ตามที่คุณต้องการ
+CreateToggle("1. วางตัวอัตโนมัติ", "AutoPlace", 1)
+CreateToggle("2. ขายตัวเงินอัตโนมัติ", "AutoSell", 2)
+CreateToggle("3. เลือกด่านอัตโนมัติ", "AutoStage", 3)
+CreateToggle("4. ปรับความเร็วอัตโนมัติ", "AutoSpeed", 4)
+CreateToggle("5. Auto ข้ามเวฟอัตโนมัติ", "AutoSkip", 5)
+
+-- ระบบลูปการทำงานเบื้องหลัง (ทำงานแยกอิสระ ไม่ทำให้เกมกระตุก)
+task.spawn(function()
+    while true do
+        -- 1. วางตัวอัตโนมัติ (เลือกยูนิตช่องที่ 1 แล้วคลิกวาง)
+        if State.AutoPlace then
+            PressKey(Enum.KeyCode.One)
+            task.wait(0.1)
+            ClickAt(Coords.PlacePos)
+        end
+
+        -- 2. ขายตัวเงินอัตโนมัติ (คลิกที่ตัวละคร กดปุ่ม X แล้วยืนยันขาย)
+        if State.AutoSell then
+            ClickAt(Coords.PlacePos)
+            task.wait(0.1)
+            PressKey(Enum.KeyCode.X)
+            ClickAt(Coords.SellBtn)
+        end
+
+        -- 3. เลือกด่านอัตโนมัติ
+        if State.AutoStage then
+            ClickAt(Coords.StageBtn)
+        end
+
+        -- 4. ปรับความเร็วอัตโนมัติ
+        if State.AutoSpeed then
+            ClickAt(Coords.SpeedBtn)
+        end
+
+        -- 5. Auto ข้ามเวฟอัตโนมัติ
+        if State.AutoSkip then
+            ClickAt(Coords.SkipBtn)
+        end
+
+        task.wait(1) -- ดีเลย์รอบการทำงานเพื่อความเสถียร
+    end
+end)
